@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MAJESTICONS } from './majesticons';
+import { BACKEND, authClient } from './auth-client';
 import { BRANDS } from './brands';
 
-const BACKEND = 'http://127.0.0.1:3000';
 const PROJECT = 'demo';
 
 // App demo espejada del provider demo del backend: permite probar la web
@@ -13,32 +13,48 @@ const DEMO_HTML = `<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mis tareas</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: system-ui, sans-serif; background: #f4f4f5; color: #0b0b0c; padding: 24px; }
-  h1 { font-size: 28px; margin-bottom: 16px; }
-  form { display: flex; gap: 8px; margin-bottom: 16px; }
-  input { flex: 1; min-width: 0; border: 1px solid #d4d4d8; border-radius: 10px; padding: 10px 12px; font-size: 16px; }
-  button { background: #ff6a00; color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 16px; cursor: pointer; }
-  li { list-style: none; background: #fff; border: 1px solid #e4e4e7; border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; }
-  li.done span { text-decoration: line-through; color: #71717a; }
-  li button { background: none; color: #71717a; padding: 0 4px; }
-</style>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-<h1>Mis tareas</h1>
-<form id="f"><input id="t" placeholder="Nueva tarea..."><button>Agregar</button></form>
-<ul id="list"></ul>
+<body class="bg-[#F4F4F5] text-[#0B0B0C] p-6">
+<main class="mx-auto max-w-xl">
+<h1 class="mb-4 flex items-center gap-2 text-3xl font-bold"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="h-7 w-7"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5h10m-10 7h10m-10 7h10"/><rect width="4" height="4" x="3" y="3" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" rx="1"/><rect width="4" height="4" x="3" y="10" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" rx="1"/><rect width="4" height="4" x="3" y="17" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" rx="1"/></svg>Mis tareas</h1>
+<form id="f" class="mb-4 flex gap-2"><input id="t" placeholder="Nueva tarea..." class="min-w-0 flex-1 rounded-xl border border-zinc-300 px-3 py-2.5 text-base"><button class="flex items-center gap-1 rounded-xl bg-[#FF6A00] px-4 py-2.5 text-base text-white hover:bg-[#E85D00]"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="h-5 w-5"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h7m7 0h-7m0 0V5m0 7v7"/></svg>Agregar</button></form>
+<ul id="list" class="space-y-2"></ul>
+</main>
 <script>
-  const list = document.getElementById('list');
-  document.getElementById('f').addEventListener('submit', (e) => {
+  var ICON_DONE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="h-5 w-5"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M8 5v0a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v0M8 5v0a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v0"/><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 14 2 2 4-5"/></svg>';
+  var ICON_DEL = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="h-5 w-5"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7v0a3 3 0 0 1 3-3v0a3 3 0 0 1 3 3v0M9 7h6M9 7H6m9 0h3m2 0h-2M4 7h2m0 0v11a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"/></svg>';
+  var list = document.getElementById('list');
+  document.getElementById('f').addEventListener('submit', function (e) {
     e.preventDefault();
-    const v = document.getElementById('t').value.trim();
+    var input = document.getElementById('t');
+    var v = input.value.trim();
     if (!v) return;
-    const li = document.createElement('li');
-    li.innerHTML = '<span>' + v.replace(/</g, '&lt;') + '</span><span><button onclick="this.parentElement.parentElement.classList.toggle(\\'done\\')">✓</button> <button onclick="this.parentElement.parentElement.remove()">✕</button></span>';
+    var li = document.createElement('li');
+    li.className = 'flex items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white p-3';
+    var span = document.createElement('span');
+    span.textContent = v;
+    var actions = document.createElement('span');
+    actions.className = 'flex shrink-0 gap-1';
+    var doneBtn = document.createElement('button');
+    doneBtn.type = 'button';
+    doneBtn.className = 'text-zinc-500';
+    doneBtn.innerHTML = ICON_DONE;
+    doneBtn.addEventListener('click', function () {
+      span.classList.toggle('line-through');
+      span.classList.toggle('text-zinc-400');
+    });
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'text-zinc-500';
+    delBtn.innerHTML = ICON_DEL;
+    delBtn.addEventListener('click', function () { li.remove(); });
+    actions.appendChild(doneBtn);
+    actions.appendChild(delBtn);
+    li.appendChild(span);
+    li.appendChild(actions);
     list.appendChild(li);
-    document.getElementById('t').value = '';
+    input.value = '';
   });
 </script>
 </body>
@@ -64,19 +80,13 @@ function Icon({ name, size = 22 }: { name: string; size?: number }) {
   );
 }
 
-// Isotipo provisorio (rayo naranja) hasta tener el oficial de la org.
+// Isotipo oficial de Pyrofast: llama naranja trazada de la imagen de Ray.
 function Isotype({ size = 28 }: { size?: number }) {
   return (
-    <span
-      style={{
-        width: size, height: size, borderRadius: 8, background: '#ff6a00',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}
-    >
-      <svg viewBox="0 0 24 24" width={size * 0.62} height={size * 0.62} fill="#fff">
-        <path d="M13 2 4.5 13.5H11L9.5 22 19 10h-6.5L13 2Z" />
-      </svg>
-    </span>
+    <svg viewBox="0 0 251 331" width={size * 0.76} height={size} style={{ display: 'block', flexShrink: 0 }}>
+      <path d="M 104.424 10.940 C 91.591 14.010, 85 24.617, 85 42.201 C 85 48.472, 85.674 51.925, 88.500 60.140 C 92.886 72.887, 93.199 79.892, 89.545 83.545 C 83.941 89.150, 73.959 84.643, 68.401 74 C 66.455 70.274, 65.803 57.625, 67.228 51.237 C 67.933 48.075, 67.870 47.994, 65.228 48.630 C 60.114 49.863, 51.508 54.817, 47.799 58.662 C 42.857 63.788, 39.989 70.625, 39.360 78.782 C 38.847 85.447, 39.746 89.977, 45.556 110 C 46.777 114.204, 47.031 118.209, 46.637 127 C 46.097 139.069, 44.189 147.947, 44.063 138.980 C 43.984 133.351, 40.503 120.550, 37.910 116.354 C 35.731 112.829, 32.762 110.627, 28.910 109.679 L 26.321 109.042 26.378 124.771 C 26.441 142.132, 26.034 144.249, 19.834 158.766 C 0.855 203.206, 10.217 253.164, 43.724 286.239 C 64.152 306.404, 85.161 316.311, 115.311 319.995 C 125.370 321.224, 140.807 319.976, 152.531 316.987 C 194.842 306.197, 226.607 274.163, 237.069 231.732 C 239.832 220.521, 241.711 181.223, 240.058 169.220 C 238.562 158.370, 235.703 149.244, 230.878 139.921 C 226.927 132.289, 221.182 125, 219.115 125 C 217.698 125, 217.682 128.789, 219.082 132.806 C 221.287 139.130, 219.504 138.813, 213.707 131.849 C 207.982 124.971, 207.908 124.801, 207.362 117.232 C 206.140 100.296, 199.855 84.978, 190.011 74.947 C 184.084 68.906, 173.383 61.284, 172.320 62.346 C 171.963 62.704, 172.982 65.584, 174.585 68.748 C 177.139 73.787, 177.500 75.575, 177.500 83.173 C 177.500 90.357, 177.148 92.319, 175.450 94.596 C 172.299 98.822, 170.670 99.520, 167.258 98.107 C 164.431 96.936, 164.251 96.506, 163.728 89.686 C 162.410 72.511, 152.954 58.949, 135.372 49.017 C 128.045 44.878, 118.863 36.017, 116.034 30.355 C 113.509 25.302, 112.695 16.715, 114.317 12.250 C 115.077 10.158, 114.867 10.007, 111.317 10.102 C 109.218 10.159, 106.116 10.536, 104.424 10.940" fill="#FF6A00" />
+      <path d="M 72.017 205.750 C 72.049 210.817, 74.821 221.714, 77.329 226.631 C 82.668 237.099, 92.702 244.635, 105.041 247.441 C 115.248 249.763, 141.658 249.372, 140.788 246.913 C 140.492 246.077, 73.561 203, 72.558 203 C 72.251 203, 72.008 204.238, 72.017 205.750 M 196.500 235.579 C 184.950 242.992, 175.368 249.439, 175.207 249.907 C 174.678 251.442, 187.512 252.177, 194.072 250.987 C 208.436 248.382, 216.373 240.476, 217.719 227.432 C 218.028 224.444, 218.104 222.023, 217.890 222.051 C 217.675 222.079, 208.050 228.166, 196.500 235.579" fill="#000000" />
+    </svg>
   );
 }
 
@@ -207,6 +217,12 @@ export default function App() {
   const [prompt, setPrompt] = useState('');
   const [provider, setProvider] = useState('demo');
   const [apiKey, setApiKey] = useState('');
+  const [user, setUser] = useState<{ email: string } | null>(null);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPass, setAuthPass] = useState('');
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authError, setAuthError] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [files, setFiles] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState('');
@@ -280,6 +296,34 @@ export default function App() {
     setBusy(false);
   }
 
+  useEffect(() => {
+    authClient.getSession().then(({ data }) => {
+      if (data?.user?.email) setUser({ email: data.user.email });
+    }).catch(() => { /* sin backend: sin sesión */ });
+  }, []);
+
+  async function submitAuth() {
+    if (!authEmail.trim() || !authPass || authBusy) return;
+    setAuthBusy(true);
+    setAuthError('');
+    try {
+      const res = authMode === 'login'
+        ? await authClient.signIn.email({ email: authEmail, password: authPass })
+        : await authClient.signUp.email({ email: authEmail, password: authPass, name: authEmail.split('@')[0] });
+      if (res.error) {
+        setAuthError(res.error.message ?? 'Error de autenticación');
+      } else {
+        const { data } = await authClient.getSession();
+        if (data?.user?.email) setUser({ email: data.user.email });
+        setAuthEmail('');
+        setAuthPass('');
+      }
+    } catch {
+      setAuthError('No llegué al backend. ¿Está corriendo?');
+    }
+    setAuthBusy(false);
+  }
+
   function newChat() {
     setMessages([]);
     setFiles([]);
@@ -292,12 +336,7 @@ export default function App() {
 
   async function logout() {
     try {
-      await fetch(`${BACKEND}/api/auth/sign-out`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: '{}',
-      });
+      await authClient.signOut();
     } catch { /* sin backend: igual se limpia el estado local */ }
     setMessages([]);
     setFiles([]);
@@ -306,6 +345,7 @@ export default function App() {
     setDemoLocal(false);
     setApiKey('');
     setProvider('demo');
+    setUser(null);
     setMenuOpen(false);
     setTab('chat');
   }
@@ -505,7 +545,32 @@ export default function App() {
             <h2>Ray</h2>
             <p className="hint">Tus llaves (BYOK) solo viven en tu navegador. Pyrofast no las guarda.</p>
             <div className="settings">
-              <div className="settingslabel">Proveedores</div>
+              <div className="settingslabel">Cuenta</div>
+              {user ? (
+                <div className="accountcard">
+                  <span><b>{user.email}</b><small>Sesión iniciada</small></span>
+                  <button className="logoutbtn" onClick={logout}>Cerrar sesión</button>
+                </div>
+              ) : (
+                <>
+                  <label>
+                    Correo
+                    <input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="tu@correo.com" />
+                  </label>
+                  <label>
+                    Contraseña
+                    <input type="password" value={authPass} onChange={(e) => setAuthPass(e.target.value)} placeholder="••••••••" />
+                  </label>
+                  {authError && <p className="autherror">{authError}</p>}
+                  <button className="newchatbtn" onClick={submitAuth} disabled={authBusy}>
+                    {authMode === 'login' ? 'Entrar' : 'Crear cuenta'}
+                  </button>
+                  <button className="linkbtn" onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setAuthError(''); }}>
+                    {authMode === 'login' ? '¿No tienes cuenta? Crea una' : '¿Ya tienes cuenta? Entra'}
+                  </button>
+                </>
+              )}
+              <div className="settingslabel" style={{ marginTop: 20 }}>Proveedores</div>
               {PROVIDERS.map((p) => (
                 <button
                   key={p.id}
