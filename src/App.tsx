@@ -208,7 +208,6 @@ export default function App() {
   const [user, setUser] = useState<{ email: string } | null>(null);
   const [authEmail, setAuthEmail] = useState('');
   const [authPass, setAuthPass] = useState('');
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authError, setAuthError] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
@@ -321,7 +320,7 @@ export default function App() {
     setAuthBusy(true);
     setAuthError('');
     try {
-      const res = authMode === 'login'
+      const res = route === '/login'
         ? await supabase.auth.signInWithPassword({ email: authEmail, password: authPass })
         : await supabase.auth.signUp({ email: authEmail, password: authPass });
       if (res.error) {
@@ -330,7 +329,7 @@ export default function App() {
         setAuthEmail('');
         setAuthPass('');
         if (window.location.pathname === '/login' || window.location.pathname === '/register') go('/');
-      } else if (authMode === 'signup') {
+      } else if (route === '/register') {
         setAuthError('Cuenta creada. Revisa tu correo para confirmarla.');
       }
     } catch {
@@ -420,6 +419,16 @@ export default function App() {
             </button>
             <button className="linkbtn muted" onClick={() => go('/')}>← Volver a Pyrofast</button>
           </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (authLoading) {
+    return (
+      <div className="shell">
+        <main className="authview">
+          <p className="hint">Cargando…</p>
         </main>
       </div>
     );
