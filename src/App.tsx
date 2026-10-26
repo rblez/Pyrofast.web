@@ -81,18 +81,16 @@ function Icon({ name, size = 22 }: { name: string; size?: number }) {
 }
 
 // Avatar de Ray (foto de perfil) con respaldo a inicial.
-function Avatar({ size = 34, big = false }: { size?: number; big?: boolean }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return <span className={big ? 'avatar big' : 'avatar'}>R</span>;
+function Avatar({ size = 34, big = false, email }: { size?: number; big?: boolean; email?: string }) {
+  const initial = (email?.trim()[0] ?? '?').toUpperCase();
+  const dim = big ? 64 : size;
   return (
-    <img
-      src="/avatar.jpg"
-      alt="Ray"
-      width={size}
-      height={size}
-      className={big ? 'avatarimg big' : 'avatarimg'}
-      onError={() => setFailed(true)}
-    />
+    <span
+      className={big ? 'avatar big' : 'avatar'}
+      style={{ width: dim, height: dim, fontSize: big ? 26 : Math.round(dim * 0.44) }}
+    >
+      {initial}
+    </span>
   );
 }
 
@@ -210,7 +208,16 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [provider, setProvider] = useState('demo');
-  const [apiKey, setApiKey] = useState('');
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem('pyrofast-keys') || '{}'); } catch { return {}; }
+  });
+  function setProviderKey(id: string, value: string) {
+    setApiKeys((prev) => {
+      const next = { ...prev, [id]: value };
+      try { localStorage.setItem('pyrofast-keys', JSON.stringify(next)); } catch { /* sin almacenamiento */ }
+      return next;
+    });
+  }
   const [user, setUser] = useState<{ email: string } | null>(null);
   const [authEmail, setAuthEmail] = useState('');
   const [authPass, setAuthPass] = useState('');
@@ -252,7 +259,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider,
-          apiKey: apiKey || undefined,
+          apiKey: apiKeys[provider] || undefined,
           project: PROJECT,
           messages: [{ role: 'user', content: body }],
         }),
@@ -360,6 +367,8 @@ export default function App() {
     setApiKey('');
     setProvider('demo');
     setUser(null);
+    setApiKeys({});
+    try { localStorage.removeItem('pyrofast-keys'); } catch { /* sin almacenamiento */ }
     setMenuOpen(false);
     setTab('chat');
     go('/login');
@@ -383,39 +392,40 @@ export default function App() {
     const isLogin = route === '/login';
     return (
       <div className="shell">
-        <header className="topbar">
-          <div className="brand"><b>Pyrofast</b></div>
-        </header>
-        <main className="profileview">
+        <main className="authview">
+          <div className="authbrand">Pyrofast</div>
           <h2>{isLogin ? 'Entrar' : 'Crear cuenta'}</h2>
           <p className="hint">Pyrofast recuerda tu sesión en este navegador.</p>
-          <div className="settings">
-            {user ? (
-              <div className="accountcard">
-                <span><b>{user.email}</b><small>Sesión iniciada</small></span>
-                <button className="logoutbtn" onClick={() => go('/')}>Ir a la app</button>
-              </div>
-            ) : (
-              <>
-                <label>
-                  Correo
-                  <input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="tu@correo.com" />
-                </label>
-                <label>
-                  Contraseña
-                  <input type="password" value={authPass} onChange={(e) => setAuthPass(e.target.value)} placeholder="••••••••" />
-                </label>
-                {authError && <p className="autherror">{authError}</p>}
-                <button className="newchatbtn" onClick={submitAuth} disabled={authBusy}>
-                  {isLogin ? 'Entrar' : 'Crear cuenta'}
-                </button>
-              </>
-            )}
+          {user ? (
+            <div className="accountcard">
+              <span><b>{user.email}</b><small>Sesión iniciada</small></span>
+              <button className="logoutbtn" onClick={() => go('/')}>Ir a la app</button>
+            </div>
+          ) : (
+            <form
+              className="authform"
+              onSubmit={(e) => { e.preventDefault(); submitAuth(); }}
+            >
+              <label>
+                Correo
+                <input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="tu@correo.com" />
+              </label>
+              <label>
+                Contraseña
+                <input type="password" value={authPass} onChange={(e) => setAuthPass(e.target.value)} placeholder="••••••••" />
+              </label>
+              {authError && <p className="autherror">{authError}</p>}
+              <button className="authsubmit" type="submit" disabled={authBusy}>
+                {isLogin ? 'Entrar' : 'Crear cuenta'}
+              </button>
+            </form>
+          )}
+          <div className="authlinks">
+            <button className="linkbtn" onClick={() => go(isLogin ? '/register' : '/login')}>
+              {isLogin ? '¿No tienes cuenta? Crea una' : '¿Ya tienes cuenta? Entra'}
+            </button>
+            <button className="linkbtn muted" onClick={() => go('/')}>← Volver a Pyrofast</button>
           </div>
-          <button className="linkbtn" onClick={() => go(isLogin ? '/register' : '/login')}>
-            {isLogin ? '¿No tienes cuenta? Crea una' : '¿Ya tienes cuenta? Entra'}
-          </button>
-          <button className="linkbtn" onClick={() => go('/')}>← Volver a Pyrofast</button>
         </main>
       </div>
     );
@@ -469,6 +479,7 @@ export default function App() {
             <div className="msgs">
               {messages.length === 0 && (
                 <div className="empty">
+                  <span style={{ color: '#ff6a00' }}><Icon name="message-circle" size={48} /></span>
                   <h2>¿Qué app quieres crear?</h2>
                   <p>Descríbela y Pyrofast la construye. Con Demo no necesitas llave.</p>
                 </div>
@@ -596,8 +607,8 @@ export default function App() {
 
         {tab === 'profile' && (
           <div className="profileview">
-            <Avatar size={64} big />
-            <h2>Ray</h2>
+            <Avatar size={64} big email={user?.email} />
+            <h2>{user ? user.email.split('@')[0] : 'Cuenta'}</h2>
             <p className="hint">Tus llaves (BYOK) solo viven en tu navegador. Pyrofast no las guarda.</p>
             <div className="settings">
               <div className="settingslabel">Cuenta</div>
@@ -620,7 +631,7 @@ export default function App() {
               {provider !== 'demo' && (
                 <label>
                   Tu llave
-                  <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-..." />
+                  <input type="password" value={apiKeys[provider] ?? ''} onChange={(e) => setProviderKey(provider, e.target.value)} placeholder="sk-..." />
                 </label>
               )}
             </div>
@@ -639,7 +650,7 @@ export default function App() {
           <Icon name="folder" size={23} /><span>Files</span>
         </button>
         <button aria-label="Perfil" className={tab === 'profile' ? 'navbtn active' : 'navbtn'} onClick={() => setTab('profile')}>
-          <Avatar size={24} /><span>Perfil</span>
+          <Avatar size={24} email={user?.email} /><span>Perfil</span>
         </button>
       </nav>
     </div>
