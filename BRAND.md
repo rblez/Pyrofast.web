@@ -29,11 +29,10 @@ texto y las superficies oscuras; el blanco en respiro.
 
 ## Icons
 
-Tres sets, cada uno en su papel:
+Un solo set para toda la UI:
 
-- **Solar (Streamline)**: icons de UI principales (navegación,
-  acciones, estados). Es el set por defecto en la app.
-- **Lucide**: complemento cuando Solar no tiene el icono exacto.
+- **Majesticons Line (Streamline)**: icons de UI principales
+  (navegación, acciones, estados). Es el set por defecto en la app.
 - **SimpleIcons**: solo logos de marcas (GitHub, OpenRouter, Groq,
   Google, Anthropic, etc.), nunca para UI genérica.
 
