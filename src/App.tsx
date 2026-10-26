@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { MAJESTICONS } from './majesticons';
+import { BRANDS } from './brands';
 
 const BACKEND = 'http://127.0.0.1:3000';
 const PROJECT = 'demo';
@@ -93,6 +94,30 @@ function Avatar({ size = 34, big = false }: { size?: number; big?: boolean }) {
       onError={() => setFailed(true)}
     />
   );
+}
+
+// Proveedores: logo SimpleIcons si existe en el set, icono Majesticons si no
+// (Groq, OpenAI y Demo no están en SimpleIcons).
+const PROVIDERS = [
+  { id: 'demo', label: 'Demo (sin llave)', note: 'Sin llave, app de ejemplo', brand: '', icon: 'bulb' },
+  { id: 'openrouter', label: 'OpenRouter', note: 'Modelos :free', brand: 'openrouter', icon: '' },
+  { id: 'groq', label: 'Groq', note: 'Tier gratis', brand: '', icon: 'cpu' },
+  { id: 'gemini', label: 'Gemini', note: 'Google AI Studio gratis', brand: 'gemini', icon: '' },
+  { id: 'deepseek', label: 'DeepSeek', note: 'Precios bajos', brand: 'deepseek', icon: '' },
+  { id: 'anthropic', label: 'Claude (Anthropic)', note: 'De pago por uso', brand: 'anthropic', icon: '' },
+  { id: 'openai', label: 'OpenAI', note: 'De pago por uso', brand: '', icon: 'robot' },
+];
+
+function BrandIcon({ p, size = 24 }: { p: (typeof PROVIDERS)[number]; size?: number }) {
+  if (p.brand && BRANDS[p.brand]) {
+    const b = BRANDS[p.brand];
+    return (
+      <svg viewBox="0 0 24 24" width={size} height={size} fill={b.hex} style={{ display: 'block', flexShrink: 0 }}>
+        <path d={b.path} />
+      </svg>
+    );
+  }
+  return <Icon name={p.icon} size={size} />;
 }
 
 function randomId() {
@@ -265,6 +290,26 @@ export default function App() {
     setTab('chat');
   }
 
+  async function logout() {
+    try {
+      await fetch(`${BACKEND}/api/auth/sign-out`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: '{}',
+      });
+    } catch { /* sin backend: igual se limpia el estado local */ }
+    setMessages([]);
+    setFiles([]);
+    setSelectedFile('');
+    setCode('');
+    setDemoLocal(false);
+    setApiKey('');
+    setProvider('demo');
+    setMenuOpen(false);
+    setTab('chat');
+  }
+
   async function copyMsg(i: number, text: string) {
     try { await navigator.clipboard.writeText(text); } catch { /* portapapeles no disponible */ }
     setCopied(i);
@@ -313,13 +358,9 @@ export default function App() {
               <span>{files.length ? 'App de tareas' : 'Nuevo chat'}</span>
             </div>
             <div className="drawerfoot">
-              <button className="drawerrow" onClick={() => { setMenuOpen(false); setTab('profile'); }}>
-                <Avatar size={34} />
-                <span><b>Ray</b><small>BYOK · sin llave guardada</small></span>
-              </button>
-              <button className="drawerrow" onClick={() => { setMenuOpen(false); setTab('profile'); }}>
-                <Icon name="settings" size={22} />
-                <span>Ajustes</span>
+              <button className="drawerrow" onClick={logout}>
+                <Icon name="logout" size={22} />
+                <span>Cerrar sesión</span>
               </button>
             </div>
           </aside>
@@ -358,7 +399,7 @@ export default function App() {
               ))}
             </div>
             <div className="providerline">
-              {provider === 'demo' ? 'Demo (sin llave)' : provider} ·{' '}
+              {(PROVIDERS.find((p) => p.id === provider)?.label ?? provider)} ·{' '}
               <button onClick={() => setTab('profile')}>cambiar</button>
             </div>
             {replyTo && (
@@ -463,22 +504,26 @@ export default function App() {
             <Avatar size={64} big />
             <h2>Ray</h2>
             <p className="hint">Tus llaves (BYOK) solo viven en tu navegador. Pyrofast no las guarda.</p>
-            <label>
-              Provider
-              <select value={provider} onChange={(e) => setProvider(e.target.value)}>
-                <option value="demo">Demo (sin llave)</option>
-                <option value="openrouter">OpenRouter</option>
-                <option value="groq">Groq</option>
-                <option value="gemini">Gemini</option>
-                <option value="anthropic">Claude</option>
-              </select>
-            </label>
-            {provider !== 'demo' && (
-              <label>
-                Tu llave
-                <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-..." />
-              </label>
-            )}
+            <div className="settings">
+              <div className="settingslabel">Proveedores</div>
+              {PROVIDERS.map((p) => (
+                <button
+                  key={p.id}
+                  className={provider === p.id ? 'providerrow active' : 'providerrow'}
+                  onClick={() => setProvider(p.id)}
+                >
+                  <BrandIcon p={p} size={26} />
+                  <span className="providername"><b>{p.label}</b><small>{p.note}</small></span>
+                  {provider === p.id && <span className="provideractive">Activo</span>}
+                </button>
+              ))}
+              {provider !== 'demo' && (
+                <label>
+                  Tu llave
+                  <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-..." />
+                </label>
+              )}
+            </div>
           </div>
         )}
       </main>
