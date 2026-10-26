@@ -186,10 +186,6 @@ export default function App() {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
-  useEffect(() => {
-    if (route === '/login') setAuthMode('login');
-    if (route === '/register') setAuthMode('signup');
-  }, [route]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [provider, setProvider] = useState('demo');
