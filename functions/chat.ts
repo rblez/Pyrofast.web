@@ -9,8 +9,18 @@ import { checkRateLimit } from './_lib/ratelimit.ts';
 // POST /chat — el backend del agente, dentro del mismo deploy de la web.
 // Una sola llamada al modelo (sin loop de tools): el contrato de salida
 // pide un único index.html y se extrae de la respuesta.
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...CORS } });
+}
+
+export async function onRequestOptions(): Promise<Response> {
+  return new Response(null, { status: 204, headers: CORS });
 }
 
 export async function onRequestPost(context: any): Promise<Response> {
