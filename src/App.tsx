@@ -357,7 +357,6 @@ export default function App() {
     setSelectedFile('');
     setCode('');
     setDemoLocal(false);
-    setApiKey('');
     setProvider('demo');
     setUser(null);
     setApiKeys({});
