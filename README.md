@@ -25,7 +25,7 @@ code preview con Geist Mono. La UI usa Inter en todo. **Web en React
 **Interfaz estilo ChatGPT (Ray 2026-10-26)**: header con isotipo +
 hamburguesa (sidebar de chats, perfil y ajustes abajo), mensajes con
 copiar/editar/responder, input abajo y navbar inferior Chat/Preview/
-Más/Perfil. **Preview como navegador estilo Bolt**: barra con atrás,
+Files/Perfil. **Preview como navegador estilo Bolt**: barra con atrás,
 recargar, candado y URL `pyrofast.link/app/ID` aleatoria. Iconos:
 Majesticons Line (Streamline).
 Isotipo actual = rayo provisorio, pendiente el oficial.
