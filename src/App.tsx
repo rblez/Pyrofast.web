@@ -245,9 +245,12 @@ export default function App() {
     setBusy(true);
     setMessages((m) => [...m, { role: 'user', text: body }]);
     try {
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
       const res = await fetch(`${BACKEND}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: token
+          ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+          : { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider,
           apiKey: apiKeys[provider] || undefined,
