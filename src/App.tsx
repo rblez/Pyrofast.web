@@ -380,6 +380,16 @@ export default function App() {
 
   const highlighted = highlightFile(code, extOf(selectedFile));
 
+  if (authLoading) {
+    return (
+      <div className="shell">
+        <main className="authview">
+          <p className="hint">Cargando…</p>
+        </main>
+      </div>
+    );
+  }
+
   if (route === '/login' || route === '/register') {
     const isLogin = route === '/login';
     return (
@@ -418,16 +428,6 @@ export default function App() {
             </button>
             <button className="linkbtn muted" onClick={() => go('/')}>← Volver a Pyrofast</button>
           </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (authLoading) {
-    return (
-      <div className="shell">
-        <main className="authview">
-          <p className="hint">Cargando…</p>
         </main>
       </div>
     );
