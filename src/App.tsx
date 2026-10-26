@@ -133,13 +133,6 @@ function BrandIcon({ p, size = 24 }: { p: (typeof PROVIDERS)[number]; size?: num
   return <Icon name={p.icon} size={size} />;
 }
 
-function randomId() {
-  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
-  let out = '';
-  for (let i = 0; i < 8; i++) out += chars[Math.floor(Math.random() * chars.length)];
-  return out;
-}
-
 // Resaltado estilo VS Code Dark+ (por extensión, con sangría intacta).
 // Un solo pase por línea: cada token se pinta una vez y nada se reprocesa.
 const JS_KEYWORDS = ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'new', 'class', 'import', 'from', 'export', 'default', 'true', 'false', 'null', 'undefined', 'this', 'typeof', 'await', 'async'];
@@ -216,6 +209,17 @@ function fileIcon(file: string) {
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('chat');
+  const [route, setRoute] = useState(() => { const p = window.location.pathname.replace(/\/+$/, ''); return p || '/'; });
+  function go(path: string) { window.history.pushState(null, '', path); setRoute(path); }
+  useEffect(() => {
+    const onPop = () => { const p = window.location.pathname.replace(/\/+$/, ''); setRoute(p || '/'); };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  useEffect(() => {
+    if (route === '/login') setAuthMode('login');
+    if (route === '/register') setAuthMode('signup');
+  }, [route]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [provider, setProvider] = useState('demo');
@@ -231,14 +235,14 @@ export default function App() {
   const [selectedFile, setSelectedFile] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
-  const [previewId] = useState(randomId);
   const [previewKey, setPreviewKey] = useState(0);
   const [demoLocal, setDemoLocal] = useState(false);
   const [replyTo, setReplyTo] = useState('');
   const [copied, setCopied] = useState(-1);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const displayUrl = `pyrofast.link/app/${previewId}`;
+  const previewSrc = `${BACKEND}/preview/${PROJECT}/index.html`;
+  const displayUrl = demoLocal ? `${window.location.host}/preview/${PROJECT}` : previewSrc.replace(/^https?:\/\//, '');
 
   async function loadCode(path: string) {
     if (!path) return;
@@ -320,6 +324,7 @@ export default function App() {
         if (data?.user?.email) setUser({ email: data.user.email });
         setAuthEmail('');
         setAuthPass('');
+        if (window.location.pathname === '/login' || window.location.pathname === '/register') go('/');
       }
     } catch {
       setAuthError('No llegué al backend. ¿Está corriendo?');
@@ -360,12 +365,54 @@ export default function App() {
   }
 
   function sharePreview() {
-    const url = 'https://' + displayUrl;
+    const url = demoLocal ? `${window.location.origin}/preview/${PROJECT}` : previewSrc;
     if (navigator.share) navigator.share({ url }).catch(() => {});
     else navigator.clipboard?.writeText(url).catch(() => {});
   }
 
   const highlighted = highlightFile(code, extOf(selectedFile));
+
+  if (route === '/login' || route === '/register') {
+    const isLogin = route === '/login';
+    return (
+      <div className="shell">
+        <header className="topbar">
+          <div className="brand"><Isotype /><b>Pyrofast</b></div>
+        </header>
+        <main className="profileview">
+          <h2>{isLogin ? 'Entrar' : 'Crear cuenta'}</h2>
+          <p className="hint">Pyrofast recuerda tu sesión en este navegador.</p>
+          <div className="settings">
+            {user ? (
+              <div className="accountcard">
+                <span><b>{user.email}</b><small>Sesión iniciada</small></span>
+                <button className="logoutbtn" onClick={() => go('/')}>Ir a la app</button>
+              </div>
+            ) : (
+              <>
+                <label>
+                  Correo
+                  <input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="tu@correo.com" />
+                </label>
+                <label>
+                  Contraseña
+                  <input type="password" value={authPass} onChange={(e) => setAuthPass(e.target.value)} placeholder="••••••••" />
+                </label>
+                {authError && <p className="autherror">{authError}</p>}
+                <button className="newchatbtn" onClick={submitAuth} disabled={authBusy}>
+                  {isLogin ? 'Entrar' : 'Crear cuenta'}
+                </button>
+              </>
+            )}
+          </div>
+          <button className="linkbtn" onClick={() => go(isLogin ? '/register' : '/login')}>
+            {isLogin ? '¿No tienes cuenta? Crea una' : '¿Ya tienes cuenta? Entra'}
+          </button>
+          <button className="linkbtn" onClick={() => go('/')}>← Volver a Pyrofast</button>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="shell">
