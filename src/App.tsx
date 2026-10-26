@@ -1,8 +1,47 @@
 import { useRef, useState } from 'react';
-import { SOLAR } from './solar';
+import { MAJESTICONS } from './majesticons';
 
 const BACKEND = 'http://127.0.0.1:3000';
 const PROJECT = 'demo';
+
+// App demo espejada del provider demo del backend: permite probar la web
+// sin backend (modo demo local). Mismo HTML que genera el backend.
+const DEMO_HTML = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mis tareas</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; background: #f4f4f5; color: #0b0b0c; padding: 24px; }
+  h1 { font-size: 28px; margin-bottom: 16px; }
+  form { display: flex; gap: 8px; margin-bottom: 16px; }
+  input { flex: 1; min-width: 0; border: 1px solid #d4d4d8; border-radius: 10px; padding: 10px 12px; font-size: 16px; }
+  button { background: #ff6a00; color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 16px; cursor: pointer; }
+  li { list-style: none; background: #fff; border: 1px solid #e4e4e7; border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+  li.done span { text-decoration: line-through; color: #71717a; }
+  li button { background: none; color: #71717a; padding: 0 4px; }
+</style>
+</head>
+<body>
+<h1>Mis tareas</h1>
+<form id="f"><input id="t" placeholder="Nueva tarea..."><button>Agregar</button></form>
+<ul id="list"></ul>
+<script>
+  const list = document.getElementById('list');
+  document.getElementById('f').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = document.getElementById('t').value.trim();
+    if (!v) return;
+    const li = document.createElement('li');
+    li.innerHTML = '<span>' + v.replace(/</g, '&lt;') + '</span><span><button onclick="this.parentElement.parentElement.classList.toggle(\\'done\\')">✓</button> <button onclick="this.parentElement.parentElement.remove()">✕</button></span>';
+    list.appendChild(li);
+    document.getElementById('t').value = '';
+  });
+</script>
+</body>
+</html>`;
 
 type Msg = { role: string; text: string };
 type Tab = 'chat' | 'preview' | 'files' | 'profile';
@@ -13,8 +52,13 @@ function Icon({ name, size = 22 }: { name: string; size?: number }) {
       viewBox="0 0 24 24"
       width={size}
       height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
       style={{ display: 'block', flexShrink: 0 }}
-      dangerouslySetInnerHTML={{ __html: SOLAR[name] ?? '' }}
+      dangerouslySetInnerHTML={{ __html: MAJESTICONS[name] ?? '' }}
     />
   );
 }
@@ -127,9 +171,9 @@ function extOf(file: string) {
 
 function fileIcon(file: string) {
   const ext = extOf(file);
-  if (ext === 'html' || ext === 'css' || ext === 'js') return 'codeSlash';
-  if (/\.(png|jpg|jpeg|gif|webp|svg)$/.test(file)) return 'gallery';
-  return 'fileText';
+  if (ext === 'html' || ext === 'css' || ext === 'js') return 'code';
+  if (/\.(png|jpg|jpeg|gif|webp|svg)$/.test(file)) return 'image';
+  return 'file-text';
 }
 
 export default function App() {
@@ -145,6 +189,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [previewId] = useState(randomId);
   const [previewKey, setPreviewKey] = useState(0);
+  const [demoLocal, setDemoLocal] = useState(false);
   const [replyTo, setReplyTo] = useState('');
   const [copied, setCopied] = useState(-1);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -153,6 +198,7 @@ export default function App() {
 
   async function loadCode(path: string) {
     if (!path) return;
+    if (demoLocal) { setCode(DEMO_HTML); return; }
     const res = await fetch(`${BACKEND}/projects/${PROJECT}/code?path=${encodeURIComponent(path)}`);
     setCode(await res.text());
   }
@@ -193,7 +239,18 @@ export default function App() {
         setPreviewKey(Date.now());
       }
     } catch {
-      setMessages((m) => [...m, { role: 'assistant', text: 'Error: no llegué al backend. ¿Está corriendo en el puerto 3000?' }]);
+      if (provider === 'demo' && !demoLocal) {
+        setDemoLocal(true);
+        setFiles(['index.html']);
+        setSelectedFile('index.html');
+        setCode(DEMO_HTML);
+        setPreviewKey(Date.now());
+        setMessages((m) => [...m, { role: 'assistant', text: 'Voy a crear tu app de ejemplo: una lista de tareas.' }, { role: 'assistant', text: 'Listo, creé tu app de tareas. Puedes verla en el preview y revisar el código.' }]);
+      } else if (provider === 'demo') {
+        setMessages((m) => [...m, { role: 'assistant', text: 'Tu app de tareas ya está creada: la ves en el preview y su código en Files.' }]);
+      } else {
+        setMessages((m) => [...m, { role: 'assistant', text: 'Error: no llegué al backend. ¿Está corriendo en el puerto 3000?' }]);
+      }
     }
     setBusy(false);
   }
@@ -203,6 +260,7 @@ export default function App() {
     setFiles([]);
     setSelectedFile('');
     setCode('');
+    setDemoLocal(false);
     setMenuOpen(false);
     setTab('chat');
   }
@@ -225,14 +283,14 @@ export default function App() {
     <div className="shell">
       <header className="topbar">
         <button aria-label="Abrir menú" className="iconbtn" onClick={() => setMenuOpen(true)}>
-          <Icon name="navMenu" size={24} />
+          <Icon name="menu" size={24} />
         </button>
         <div className="brand">
           <Isotype />
           <b>Pyrofast</b>
         </div>
         <button aria-label="Nuevo chat" className="iconbtn" onClick={newChat}>
-          <Icon name="add" size={24} />
+          <Icon name="plus" size={24} />
         </button>
       </header>
 
@@ -243,15 +301,15 @@ export default function App() {
             <div className="drawerhead">
               <div className="brand"><Isotype size={24} /><b>Pyrofast</b></div>
               <button aria-label="Cerrar menú" className="iconbtn" onClick={() => setMenuOpen(false)}>
-                <Icon name="close" size={22} />
+                <Icon name="x" size={22} />
               </button>
             </div>
             <button className="newchatbtn" onClick={newChat}>
-              <Icon name="add" size={20} /> Nuevo chat
+              <Icon name="plus" size={20} /> Nuevo chat
             </button>
             <div className="drawerlabel">Chats</div>
             <div className="chatitem active">
-              <Icon name="callChat" size={20} />
+              <Icon name="message-circle" size={20} />
               <span>{files.length ? 'App de tareas' : 'Nuevo chat'}</span>
             </div>
             <div className="drawerfoot">
@@ -260,7 +318,7 @@ export default function App() {
                 <span><b>Ray</b><small>BYOK · sin llave guardada</small></span>
               </button>
               <button className="drawerrow" onClick={() => { setMenuOpen(false); setTab('profile'); }}>
-                <Icon name="navSettings" size={22} />
+                <Icon name="settings" size={22} />
                 <span>Ajustes</span>
               </button>
             </div>
@@ -289,11 +347,11 @@ export default function App() {
                     </button>
                     {m.role === 'user' && (
                       <button aria-label="Editar" onClick={() => setPrompt(m.text)}>
-                        <Icon name="pen" size={17} /><span>Editar</span>
+                        <Icon name="edit" size={17} /><span>Editar</span>
                       </button>
                     )}
                     <button aria-label="Responder" onClick={() => setReplyTo(m.text)}>
-                      <Icon name="cornerDownRight" size={17} /><span>Responder</span>
+                      <Icon name="corner-up-left" size={17} /><span>Responder</span>
                     </button>
                   </div>
                 </div>
@@ -310,7 +368,7 @@ export default function App() {
               </div>
             )}
             <div className="composer">
-              <button aria-label="Adjuntar" className="iconbtn"><Icon name="add" size={22} /></button>
+              <button aria-label="Adjuntar" className="iconbtn"><Icon name="plus" size={22} /></button>
               <input
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
@@ -318,7 +376,7 @@ export default function App() {
                 onKeyDown={(e) => e.key === 'Enter' && send()}
               />
               <button aria-label="Enviar" className="sendbtn" onClick={send} disabled={busy}>
-                <Icon name="arrowRightUp" size={20} />
+                <Icon name="send" size={20} />
               </button>
             </div>
           </>
@@ -328,17 +386,17 @@ export default function App() {
           <div className="browser">
             <div className="chrome">
               <button aria-label="Atrás" className="iconbtn sm" onClick={() => iframeRef.current?.contentWindow?.history.back()}>
-                <Icon name="chevronLeft" size={20} />
+                <Icon name="chevron-left" size={20} />
               </button>
               <button aria-label="Recargar" className="iconbtn sm" onClick={() => setPreviewKey(Date.now())}>
-                <Icon name="history" size={20} />
+                <Icon name="refresh-cw" size={20} />
               </button>
               <div className="urlbar">
                 <Icon name="lock" size={14} />
                 <span>{displayUrl}</span>
               </div>
               <button aria-label="Compartir" className="iconbtn sm" onClick={sharePreview}>
-                <Icon name="share" size={20} />
+                <Icon name="share-2" size={20} />
               </button>
             </div>
             {files.length ? (
@@ -346,7 +404,7 @@ export default function App() {
                 ref={iframeRef}
                 title="preview"
                 key={previewKey}
-                src={`${BACKEND}/preview/${PROJECT}/index.html`}
+                {...(demoLocal ? { srcDoc: code } : { src: `${BACKEND}/preview/${PROJECT}/index.html` })}
               />
             ) : (
               <div className="empty">
@@ -395,7 +453,7 @@ export default function App() {
               </div>
             )}
             <button className="newchatbtn" onClick={newChat}>
-              <Icon name="add" size={20} /> Nuevo chat
+              <Icon name="plus" size={20} /> Nuevo chat
             </button>
           </div>
         )}
@@ -427,13 +485,13 @@ export default function App() {
 
       <nav className="bottomnav">
         <button aria-label="Chat" className={tab === 'chat' ? 'navbtn active' : 'navbtn'} onClick={() => setTab('chat')}>
-          <Icon name="callChat" size={23} /><span>Chat</span>
+          <Icon name="message-circle" size={23} /><span>Chat</span>
         </button>
         <button aria-label="Preview" className={tab === 'preview' ? 'navbtn active' : 'navbtn'} onClick={() => setTab('preview')}>
           <Icon name="globe" size={23} /><span>Preview</span>
         </button>
         <button aria-label="Files" className={tab === 'files' ? 'navbtn active' : 'navbtn'} onClick={() => setTab('files')}>
-          <Icon name="folderOpen" size={23} /><span>Files</span>
+          <Icon name="folder" size={23} /><span>Files</span>
         </button>
         <button aria-label="Perfil" className={tab === 'profile' ? 'navbtn active' : 'navbtn'} onClick={() => setTab('profile')}>
           <Avatar size={24} /><span>Perfil</span>
