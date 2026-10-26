@@ -178,3 +178,61 @@ button { font-family: inherit; cursor: pointer; }
 .providername { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
 .providername small { color: #71717a; font-size: 12px; font-weight: normal; }
 .provideractive { color: #ff6a00; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+
+.accountcard {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: #fff; border: 1px solid #e4e4e7; border-radius: 12px;
+  padding: 12px; box-sizing: border-box; margin-bottom: 8px;
+}
+.accountcard span { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.accountcard small { color: #71717a; font-size: 12px; }
+.logoutbtn {
+  background: none; border: none; color: #ff6a00; font-size: 14px;
+  font-weight: 600; flex-shrink: 0; padding: 6px;
+}
+.linkbtn {
+  display: block; width: 100%; background: none; border: none;
+  color: #ff6a00; font-size: 14px; padding: 10px 0; text-align: center;
+}
+.autherror { color: #dc2626; font-size: 13px; margin: 8px 0 0; }
+
+/* Pantallas de auth: centradas, sin chrome de la app. */
+.authview {
+  flex: 1; display: flex; flex-direction: column; justify-content: center;
+  padding: 32px 24px calc(32px + env(safe-area-inset-bottom));
+  max-width: 400px; width: 100%; margin: 0 auto; box-sizing: border-box;
+}
+.authbrand { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; text-align: center; margin-bottom: 8px; }
+.authview h2 { font-size: 24px; margin: 24px 0 8px; text-align: center; }
+.authview .hint { font-size: 15px; line-height: 1.5; color: #52525b; text-align: center; margin: 0 0 24px; }
+.authform { display: flex; flex-direction: column; gap: 16px; }
+.authform label { font-size: 14px; font-weight: 500; display: block; }
+.authform input {
+  display: block; width: 100%; margin-top: 8px; border: 1px solid #d4d4d8;
+  border-radius: 12px; padding: 13px 14px; font-size: 16px; background: #fff; color: #0b0b0c;
+  box-sizing: border-box; outline: none;
+}
+.authform input:focus { border-color: #ff6a00; box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.15); }
+.authform .autherror {
+  background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px;
+  padding: 10px 12px; color: #dc2626; font-size: 14px; margin: 0;
+}
+.authsubmit {
+  display: flex; align-items: center; justify-content: center;
+  background: #ff6a00; color: #fff; border: none; border-radius: 12px;
+  height: 48px; font-size: 16px; font-weight: 600; width: 100%;
+}
+.authsubmit:hover { background: #e85d00; }
+.authsubmit:disabled { opacity: 0.6; }
+.authlinks { display: flex; flex-direction: column; gap: 4px; margin-top: 20px; }
+.authlinks .linkbtn.muted { color: #71717a; }
+
+/* Pulido general: foco naranja, botones con hover y deshabilitado. */
+.profileview input, .profileview select { padding: 13px 12px; }
+.profileview input:focus, .profileview select:focus {
+  border-color: #ff6a00; outline: none; box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.15);
+}
+.composer input:focus { border-color: #ff6a00; }
+.newchatbtn:hover { background: #e85d00; }
+.newchatbtn:disabled { opacity: 0.6; }
+.sendbtn:hover { background: #e85d00; }
