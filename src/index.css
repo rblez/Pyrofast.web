@@ -236,3 +236,16 @@ button { font-family: inherit; cursor: pointer; }
 .newchatbtn:hover { background: #e85d00; }
 .newchatbtn:disabled { opacity: 0.6; }
 .sendbtn:hover { background: #e85d00; }
+
+/* Modal de token por proveedor */
+.modalwrap { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.modalscrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.4); }
+.modalcard { position: relative; background: #fff; border-radius: 16px; padding: 20px; width: 100%; max-width: 360px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); }
+.modalhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.modalhead b { font-size: 17px; }
+.modalcard p { font-size: 14px; color: #52525b; line-height: 1.5; margin: 0 0 16px; }
+.modalcard label { font-size: 14px; font-weight: 500; display: block; }
+.modalcard input { display: block; width: 100%; margin-top: 8px; border: 1px solid #d4d4d8; border-radius: 12px; padding: 13px 14px; font-size: 16px; background: #fff; color: #0b0b0c; box-sizing: border-box; outline: none; }
+.modalcard input:focus { border-color: #ff6a00; box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.15); }
+.modalcard .authsubmit { margin-top: 16px; }
+.modalcard .linkbtn { width: 100%; text-align: center; }
