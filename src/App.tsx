@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { MAJESTICONS } from './majesticons';
 import { BACKEND, supabase } from './supabase';
-import { BRANDS } from './brands';
 
 const PROJECT = 'demo';
 
@@ -94,29 +93,15 @@ function Avatar({ size = 34, big = false, email }: { size?: number; big?: boolea
   );
 }
 
-// Proveedores: logo SimpleIcons si existe en el set, icono Majesticons si no
-// (Groq, OpenAI y Demo no están en SimpleIcons).
 const PROVIDERS = [
-  { id: 'demo', label: 'Demo (sin llave)', note: 'Sin llave, app de ejemplo', brand: '', icon: 'bulb' },
-  { id: 'openrouter', label: 'OpenRouter', note: 'Modelos :free', brand: 'openrouter', icon: '' },
-  { id: 'groq', label: 'Groq', note: 'Tier gratis', brand: '', icon: 'cpu' },
-  { id: 'gemini', label: 'Gemini', note: 'Google AI Studio gratis', brand: 'gemini', icon: '' },
-  { id: 'deepseek', label: 'DeepSeek', note: 'Precios bajos', brand: 'deepseek', icon: '' },
-  { id: 'anthropic', label: 'Claude (Anthropic)', note: 'De pago por uso', brand: 'anthropic', icon: '' },
-  { id: 'openai', label: 'OpenAI', note: 'De pago por uso', brand: '', icon: 'robot' },
+  { id: 'demo', label: 'Demo (sin llave)', note: 'Sin llave, app de ejemplo' },
+  { id: 'openrouter', label: 'OpenRouter', note: 'Modelos :free' },
+  { id: 'groq', label: 'Groq', note: 'Tier gratis' },
+  { id: 'gemini', label: 'Gemini', note: 'Google AI Studio gratis' },
+  { id: 'deepseek', label: 'DeepSeek', note: 'Precios bajos' },
+  { id: 'anthropic', label: 'Claude (Anthropic)', note: 'De pago por uso' },
+  { id: 'openai', label: 'OpenAI', note: 'De pago por uso' },
 ];
-
-function BrandIcon({ p, size = 24 }: { p: (typeof PROVIDERS)[number]; size?: number }) {
-  if (p.brand && BRANDS[p.brand]) {
-    const b = BRANDS[p.brand];
-    return (
-      <svg viewBox="0 0 24 24" width={size} height={size} fill={b.hex} style={{ display: 'block', flexShrink: 0 }}>
-        <path d={b.path} />
-      </svg>
-    );
-  }
-  return <Icon name={p.icon} size={size} />;
-}
 
 // Resaltado estilo VS Code Dark+ (por extensión, con sangría intacta).
 // Un solo pase por línea: cada token se pinta una vez y nada se reprocesa.
@@ -208,6 +193,8 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [provider, setProvider] = useState('demo');
+  const [keyModal, setKeyModal] = useState<string | null>(null);
+  const [modalKey, setModalKey] = useState('');
   const [apiKeys, setApiKeys] = useState<Record<string, string>>(() => {
     try { return JSON.parse(localStorage.getItem('pyrofast-keys') || '{}'); } catch { return {}; }
   });
@@ -242,7 +229,11 @@ export default function App() {
   async function loadCode(path: string) {
     if (!path) return;
     if (demoLocal) { setCode(DEMO_HTML); return; }
-    const res = await fetch(`${BACKEND}/projects/${PROJECT}/code?path=${encodeURIComponent(path)}`);
+    const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+    const res = await fetch(`${BACKEND}/projects/${PROJECT}/code?path=${encodeURIComponent(path)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) { setCode(''); return; }
     setCode(await res.text());
   }
 
@@ -551,7 +542,7 @@ export default function App() {
                 ref={iframeRef}
                 title="preview"
                 key={previewKey}
-                {...(demoLocal ? { srcDoc: code } : { src: `${BACKEND}/preview/${PROJECT}/index.html` })}
+                {...(code ? { srcDoc: code } : { src: `${BACKEND}/preview/${PROJECT}/index.html` })}
               />
             ) : (
               <div className="empty">
@@ -621,19 +612,19 @@ export default function App() {
                 <button
                   key={p.id}
                   className={provider === p.id ? 'providerrow active' : 'providerrow'}
-                  onClick={() => setProvider(p.id)}
+                  onClick={() => {
+                    if (p.id === 'demo') {
+                      setProvider('demo');
+                    } else {
+                      setModalKey(apiKeys[p.id] ?? '');
+                      setKeyModal(p.id);
+                    }
+                  }}
                 >
-                  <BrandIcon p={p} size={26} />
                   <span className="providername"><b>{p.label}</b><small>{p.note}</small></span>
                   {provider === p.id && <span className="provideractive">Activo</span>}
                 </button>
               ))}
-              {provider !== 'demo' && (
-                <label>
-                  Tu llave
-                  <input type="password" value={apiKeys[provider] ?? ''} onChange={(e) => setProviderKey(provider, e.target.value)} placeholder="sk-..." />
-                </label>
-              )}
             </div>
           </div>
         )}
@@ -653,6 +644,29 @@ export default function App() {
           <Avatar size={24} email={user?.email} /><span>Perfil</span>
         </button>
       </nav>
+
+      {keyModal && (
+        <div className="modalwrap">
+          <div className="modalscrim" onClick={() => setKeyModal(null)} />
+          <div className="modalcard">
+            <div className="modalhead">
+              <b>{PROVIDERS.find((p) => p.id === keyModal)?.label}</b>
+              <button className="iconbtn" aria-label="Cerrar" onClick={() => setKeyModal(null)}>
+                <Icon name="x" size={22} />
+              </button>
+            </div>
+            <p>Tu token solo vive en este navegador. Se usa para llamar al proveedor cuando chateas.</p>
+            <label>
+              Token
+              <input type="password" value={modalKey} onChange={(e) => setModalKey(e.target.value)} placeholder="sk-..." autoFocus />
+            </label>
+            <button className="authsubmit" onClick={() => { setProviderKey(keyModal, modalKey); setProvider(keyModal); setKeyModal(null); }}>Guardar y activar</button>
+            {apiKeys[keyModal] && (
+              <button className="linkbtn muted" style={{ marginTop: 12 }} onClick={() => { setProviderKey(keyModal, ''); setModalKey(''); }}>Quitar token</button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
