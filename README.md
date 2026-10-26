@@ -27,7 +27,7 @@ hamburguesa (sidebar de chats, perfil y ajustes abajo), mensajes con
 copiar/editar/responder, input abajo y navbar inferior Chat/Preview/
 Más/Perfil. **Preview como navegador estilo Bolt**: barra con atrás,
 recargar, candado y URL `pyrofast.link/app/ID` aleatoria. Iconos:
-Solar verbatim (de Tiendly) en principales, Lucide en extras.
+Majesticons Line (Streamline).
 Isotipo actual = rayo provisorio, pendiente el oficial.
 
 ```bash
@@ -41,7 +41,7 @@ npm install && npm run dev
 
 Ver `BRAND.md`: paleta gris / blanco / negro / naranja (del logo de
 la org), botones naranjas (`#FF6A00`), fondo gris con ruido, icons
-Solar (UI) + Lucide (complemento) + SimpleIcons (logos de marcas).
+Majesticons Line (UI) + SimpleIcons (logos de marcas).
 
 ## Pantallas (v1)
 
