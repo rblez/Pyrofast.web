@@ -253,7 +253,12 @@ export default function App() {
           messages: [{ role: 'user', content: body }],
         }),
       });
-      const data = await res.json();
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`el backend respondió ${res.status} sin JSON`);
+      }
       if (data.error) {
         setMessages((m) => [...m, { role: 'assistant', text: 'Error: ' + data.error }]);
       } else {
@@ -270,7 +275,7 @@ export default function App() {
         }
         setPreviewKey(Date.now());
       }
-    } catch {
+    } catch (err: any) {
       if (provider === 'demo' && !demoLocal) {
         setDemoLocal(true);
         setFiles(['index.html']);
@@ -281,7 +286,7 @@ export default function App() {
       } else if (provider === 'demo') {
         setMessages((m) => [...m, { role: 'assistant', text: 'Tu app de tareas ya está creada: la ves en el preview y su código en Files.' }]);
       } else {
-        setMessages((m) => [...m, { role: 'assistant', text: 'Error: no llegué al backend. Todavía no está desplegado en Cloudflare.' }]);
+        setMessages((m) => [...m, { role: 'assistant', text: 'Error: ' + (err?.message ? String(err.message) : 'no llegué al backend') }]);
       }
     }
     setBusy(false);
