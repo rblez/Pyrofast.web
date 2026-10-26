@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { MAJESTICONS } from './majesticons';
-import { BACKEND, authClient } from './auth-client';
+import { BACKEND, supabase } from './supabase';
 import { BRANDS } from './brands';
 
 const PROJECT = 'demo';
@@ -76,19 +76,6 @@ function Icon({ name, size = 22 }: { name: string; size?: number }) {
       strokeLinejoin="round"
       style={{ display: 'block', flexShrink: 0 }}
       dangerouslySetInnerHTML={{ __html: MAJESTICONS[name] ?? '' }}
-    />
-  );
-}
-
-// Isotipo oficial de Pyrofast: llama naranja, imagen original de Ray (PNG).
-function Isotype({ size = 28 }: { size?: number }) {
-  return (
-    <img
-      src="/isotipo.png"
-      alt="Pyrofast"
-      width={size * 0.76}
-      height={size}
-      style={{ display: 'block', flexShrink: 0 }}
     />
   );
 }
@@ -230,6 +217,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authError, setAuthError] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [files, setFiles] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState('');
@@ -297,37 +285,55 @@ export default function App() {
       } else if (provider === 'demo') {
         setMessages((m) => [...m, { role: 'assistant', text: 'Tu app de tareas ya está creada: la ves en el preview y su código en Files.' }]);
       } else {
-        setMessages((m) => [...m, { role: 'assistant', text: 'Error: no llegué al backend. ¿Está corriendo en el puerto 3000?' }]);
+        setMessages((m) => [...m, { role: 'assistant', text: 'Error: no llegué al backend. Todavía no está desplegado en Cloudflare.' }]);
       }
     }
     setBusy(false);
   }
 
   useEffect(() => {
-    authClient.getSession().then(({ data }) => {
-      if (data?.user?.email) setUser({ email: data.user.email });
-    }).catch(() => { /* sin backend: sin sesión */ });
+    if (!supabase) { setAuthLoading(false); return; }
+    supabase.auth.getSession().then(({ data }) => {
+      if (data?.session?.user?.email) setUser({ email: data.session.user.email });
+      setAuthLoading(false);
+    }).catch(() => setAuthLoading(false));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user?.email ? { email: session.user.email } : null);
+    });
+    return () => listener.subscription.unsubscribe();
   }, []);
+
+  // Middleware: login obligatorio. Sin sesión, toda ruta va a /login;
+  // con sesión, /login y /register vuelven a la app.
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user && route !== '/login' && route !== '/register') go('/login');
+    if (user && (route === '/login' || route === '/register')) go('/');
+  }, [user, route, authLoading]);
 
   async function submitAuth() {
     if (!authEmail.trim() || !authPass || authBusy) return;
+    if (!supabase) {
+      setAuthError('Falta configurar Supabase (VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY).');
+      return;
+    }
     setAuthBusy(true);
     setAuthError('');
     try {
       const res = authMode === 'login'
-        ? await authClient.signIn.email({ email: authEmail, password: authPass })
-        : await authClient.signUp.email({ email: authEmail, password: authPass, name: authEmail.split('@')[0] });
+        ? await supabase.auth.signInWithPassword({ email: authEmail, password: authPass })
+        : await supabase.auth.signUp({ email: authEmail, password: authPass });
       if (res.error) {
         setAuthError(res.error.message ?? 'Error de autenticación');
-      } else {
-        const { data } = await authClient.getSession();
-        if (data?.user?.email) setUser({ email: data.user.email });
+      } else if (res.data.session) {
         setAuthEmail('');
         setAuthPass('');
         if (window.location.pathname === '/login' || window.location.pathname === '/register') go('/');
+      } else if (authMode === 'signup') {
+        setAuthError('Cuenta creada. Revisa tu correo para confirmarla.');
       }
     } catch {
-      setAuthError('No llegué al backend. ¿Está corriendo?');
+      setAuthError('No llegué a Supabase. ¿Estás conectado?');
     }
     setAuthBusy(false);
   }
@@ -344,8 +350,8 @@ export default function App() {
 
   async function logout() {
     try {
-      await authClient.signOut();
-    } catch { /* sin backend: igual se limpia el estado local */ }
+      await supabase?.auth.signOut();
+    } catch { /* sin Supabase: igual se limpia el estado local */ }
     setMessages([]);
     setFiles([]);
     setSelectedFile('');
@@ -356,6 +362,7 @@ export default function App() {
     setUser(null);
     setMenuOpen(false);
     setTab('chat');
+    go('/login');
   }
 
   async function copyMsg(i: number, text: string) {
@@ -377,7 +384,7 @@ export default function App() {
     return (
       <div className="shell">
         <header className="topbar">
-          <div className="brand"><Isotype /><b>Pyrofast</b></div>
+          <div className="brand"><b>Pyrofast</b></div>
         </header>
         <main className="profileview">
           <h2>{isLogin ? 'Entrar' : 'Crear cuenta'}</h2>
@@ -421,7 +428,6 @@ export default function App() {
           <Icon name="menu" size={24} />
         </button>
         <div className="brand">
-          <Isotype />
           <b>Pyrofast</b>
         </div>
         <button aria-label="Nuevo chat" className="iconbtn" onClick={newChat}>
@@ -434,7 +440,7 @@ export default function App() {
           <div className="scrim" onClick={() => setMenuOpen(false)} />
           <aside className="drawer">
             <div className="drawerhead">
-              <div className="brand"><Isotype size={24} /><b>Pyrofast</b></div>
+              <div className="brand"><b>Pyrofast</b></div>
               <button aria-label="Cerrar menú" className="iconbtn" onClick={() => setMenuOpen(false)}>
                 <Icon name="x" size={22} />
               </button>
@@ -463,7 +469,6 @@ export default function App() {
             <div className="msgs">
               {messages.length === 0 && (
                 <div className="empty">
-                  <Isotype size={48} />
                   <h2>¿Qué app quieres crear?</h2>
                   <p>Descríbela y Pyrofast la construye. Con Demo no necesitas llave.</p>
                 </div>
@@ -596,30 +601,10 @@ export default function App() {
             <p className="hint">Tus llaves (BYOK) solo viven en tu navegador. Pyrofast no las guarda.</p>
             <div className="settings">
               <div className="settingslabel">Cuenta</div>
-              {user ? (
-                <div className="accountcard">
-                  <span><b>{user.email}</b><small>Sesión iniciada</small></span>
-                  <button className="logoutbtn" onClick={logout}>Cerrar sesión</button>
-                </div>
-              ) : (
-                <>
-                  <label>
-                    Correo
-                    <input type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} placeholder="tu@correo.com" />
-                  </label>
-                  <label>
-                    Contraseña
-                    <input type="password" value={authPass} onChange={(e) => setAuthPass(e.target.value)} placeholder="••••••••" />
-                  </label>
-                  {authError && <p className="autherror">{authError}</p>}
-                  <button className="newchatbtn" onClick={submitAuth} disabled={authBusy}>
-                    {authMode === 'login' ? 'Entrar' : 'Crear cuenta'}
-                  </button>
-                  <button className="linkbtn" onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setAuthError(''); }}>
-                    {authMode === 'login' ? '¿No tienes cuenta? Crea una' : '¿Ya tienes cuenta? Entra'}
-                  </button>
-                </>
-              )}
+              <div className="accountcard">
+                <span><b>{user?.email}</b><small>Sesión iniciada</small></span>
+                <button className="logoutbtn" onClick={logout}>Cerrar sesión</button>
+              </div>
               <div className="settingslabel" style={{ marginTop: 20 }}>Proveedores</div>
               {PROVIDERS.map((p) => (
                 <button
